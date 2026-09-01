@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Trader - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.4.0/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-badge.live {
+            background: #ef4444;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h3 {
+            color: #667eea;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-subtext {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .positive {
+            color: #10b981;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        .neutral {
+            color: #f59e0b;
+        }
+
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+        }
+
+        nav a {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        nav a:hover, nav a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-container h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+
+        .trades-table {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.buy {
+            background: #d0f0ff;
+            color: #0369a1;
+        }
+
+        .badge.sell {
+            background: #ffe0e0;
+            color: #991b1b;
+        }
+
+        .badge.open {
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+        .badge.closed {
+            background: #e0f2fe;
+            color: #0c4a6e;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .error {
+            background: #fee;
+            color: #c00;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #efe;
+            color: #060;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 30px;
+            font-size: 12px;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        .news-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .news-item.positive {
+            border-left-color: #10b981;
+        }
+
+        .news-item.negative {
+            border-left-color: #ef4444;
+        }
+
+        .news-item.neutral {
+            border-left-color: #f59e0b;
+        }
+
+        .news-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .news-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .news-score {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 8px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 AI News Trader Dashboard</h1>
+            <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh</button>
+        </header>
+
+        <nav>
+            <a href="#" class="nav-link active" onclick="showSection('overview')">Overview</a>
+            <a href="#" class="nav-link" onclick="showSection('portfolio')">Portfolio</a>
+            <a href="#" class="nav-link" onclick="showSection('trades')">Trades</a>
+            <a href="#" class="nav-link" onclick="showSection('news')">News</a>
+        </nav>
+
+        <!-- OVERVIEW SECTION -->
+        <div id="overview" class="section">
+            <div class="grid">
+                <div class="card">
+                    <h3>Portfolio Value</h3>
+                    <div class="card-value" id="portfolio-value">$0.00</div>
+                    <div class="card-subtext">Current total</div>
+                </div>
+
+                <div class="card">
+                    <h3>Daily Return</h3>
+                    <div class="card-value" id="daily-return">0.00%</div>
+                    <div class="card-subtext">Today's performance</div>
+                </div>
+
+                <div class="card">
+                    <h3>Cumulative Return</h3>
+                    <div class="card-value" id="cumulative-return">0.00%</div>
+                    <div class="card-subtext">Total since start</div>
+                </div>
+
+                <div class="card">
+                    <h3>Open Positions</h3>
+                    <div class="card-value" id="open-positions">0</div>
+                    <div class="card-subtext">Active trades</div>
+                </div>
+
+                <div class="card">
+                    <h3>Total Trades</h3>
+                    <div class="card-value" id="total-trades">0</div>
+                    <div class="card-subtext">Closed trades</div>
+                </div>
+
+                <div class="card">
+                    <h3>Win Rate</h3>
+                    <div class="card-value" id="win-rate">0.00%</div>
+                    <div class="card-subtext">% winning trades</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Portfolio Value Trend</h3>
+                <canvas id="portfolioChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>Recent Trades</h3>
+                <div id="recent-trades-list">Loading...</div>
+            </div>
+        </div>
+
+        <!-- PORTFOLIO SECTION -->
+        <div id="portfolio" class="section" style="display: none;">
+            <div class="chart-container">
+                <h3>Portfolio Composition</h3>
+                <canvas id="compositionChart"></canvas>
+            </div>
+
+            <div class="trades-table">
+                <h3>Open Positions</h3>
+                <table id="open-positions-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Entry Price</th>
+                            <th>Current Price</th>
+                            <th>P&L</th>
+                            <th>P&L %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="open-positions-body">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TRADES SECTION -->
+        <div id="trades" class="section" style="display: none;">
+            <div class="trades-table">
+                <h3>Trade History</h3>
+                <table id="trades-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>P&L</th>
+                            <th>Return %</th>
+                            <th>Reasoning</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-body">
+                        <tr><td colspan="9" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- NEWS SECTION -->
+        <div id="news" class="section" style="display: none;">
+            <div class="chart-container">
+                <h3>News Sentiment Distribution</h3>
+                <canvas id="sentimentChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>Recent News Articles</h3>
+                <div id="news-list">Loading...</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🚀 AI News Trader v1.0 | Real-time Trading Analysis Dashboard</p>
+            <p>Last updated: <span id="last-update">--:--</span></p>
+        </div>
+    </div>
+
+    <script>
+        let portfolioChart, compositionChart, sentimentChart;
+
+        async function loadDashboard() {
+            try {
+                const response = await axios.get('/api/dashboard/summary');
+                const data = response.data;
+
+                // Update portfolio cards
+                document.getElementById('portfolio-value').textContent = 
+                    '$' + data.portfolio.total_value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                const dailyReturn = data.portfolio.daily_return;
+                document.getElementById('daily-return').textContent = 
+                    (dailyReturn >= 0 ? '+' : '') + dailyReturn.toFixed(2) + '%';
+                document.getElementById('daily-return').className = 'card-value ' + (dailyReturn >= 0 ? 'positive' : 'negative');
+
+                const cumulativeReturn = data.portfolio.cumulative_return;
+                document.getElementById('cumulative-return').textContent = 
+                    (cumulativeReturn >= 0 ? '+' : '') + cumulativeReturn.toFixed(2) + '%';
+                document.getElementById('cumulative-return').className = 'card-value ' + (cumulativeReturn >= 0 ? 'positive' : 'negative');
+
+                document.getElementById('open-positions').textContent = data.trades.open;
+                document.getElementById('total-trades').textContent = data.trades.closed;
+                document.getElementById('win-rate').textContent = data.trades.win_rate.toFixed(2) + '%';
+
+                // Load charts
+                loadPortfolioChart();
+                loadRecentTrades();
+                loadNews();
+
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadPortfolioChart() {
+            try {
+                const response = await axios.get('/api/portfolio/history?days=30');
+                const data = response.data;
+
+                const ctx = document.getElementById('portfolioChart');
+                if (portfolioChart) portfolioChart.destroy();
+
+                portfolioChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => new Date(d.timestamp).toLocaleDateString()),
+                        datasets: [{
+                            label: 'Portfolio Value',
+                            data: data.map(d => d.total_value),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Return %',
+                            data: data.map(d => d.cumulative_return),
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        interaction: {mode: 'index', intersect: false},
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {display: true, text: 'Portfolio Value ($)'}
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {display: true, text: 'Return (%)'},
+                                grid: {drawOnChartArea: false}
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading portfolio chart:', error);
+            }
+        }
+
+        async function loadRecentTrades() {
+            try {
+                const response = await axios.get('/api/trades?status=closed&limit=5');
+                const trades = response.data;
+
+                const html = trades.map(trade => `
+                    <div class="news-item ${trade.profit_loss >= 0 ? 'positive' : 'negative'}">
+                        <div class="news-title">${trade.symbol} - ${trade.type.toUpperCase()}</div>
+                        <div class="news-meta">
+                            ${new Date(trade.entry_date).toLocaleDateString()} - 
+                            P&L: $${trade.profit_loss.toFixed(2)} (${trade.profit_loss_percent.toFixed(2)}%)
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('recent-trades-list').innerHTML = html || '<p>No trades yet</p>';
+            } catch (error) {
+                console.error('Error loading trades:', error);
+            }
+        }
+
+        async function loadNews() {
+            try {
+                const response = await axios.get('/api/news/sentiment?hours=24');
+                const articles = response.data;
+
+                const html = articles.slice(0, 10).map(article => `
+                    <div class="news-item ${article.sentiment_label}">
+                        <div class="news-title">${article.title}</div>
+                        <div class="news-meta">${article.source} - ${new Date(article.published_at).toLocaleDateString()}</div>
+                        <div class="news-score">Sentiment: ${article.sentiment_score >= 0 ? '+' : ''}${article.sentiment_score}</div>
+                    </div>
+                `).join('');
+
+                document.getElementById('news-list').innerHTML = html || '<p>No recent news</p>';
+
+                // Sentiment chart
+                const sentimentCounts = {
+                    positive: articles.filter(a => a.sentiment_label === 'positive').length,
+                    negative: articles.filter(a => a.sentiment_label === 'negative').length,
+                    neutral: articles.filter(a => a.sentiment_label === 'neutral').length
+                };
+
+                const ctx = document.getElementById('sentimentChart');
+                if (sentimentChart) sentimentChart.destroy();
+
+                sentimentChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Positive', 'Negative', 'Neutral'],
+                        datasets: [{
+                            data: [sentimentCounts.positive, sentimentCounts.negative, sentimentCounts.neutral],
+                            backgroundColor: ['#10b981', '#ef4444', '#f59e0b']
+                        }]
+                    },
+                    options: {responsive: true}
+                });
+            } catch (error) {
+                console.error('Error loading news:', error);
+            }
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.getElementById(section).style.display = 'block';
+
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (section === 'portfolio') loadPortfolioChart();
+        }
+
+        function refreshAll() {
+            loadDashboard();
+        }
+
+        // Load dashboard on page load
+        loadDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>
