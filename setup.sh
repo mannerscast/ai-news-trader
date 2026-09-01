@@ -1,9 +1,9 @@
 #!/bin/bash
-# AI News Trader - Quick Setup Script
+# AI News Trader - Complete Setup Script (with Web Dashboard)
 
-echo "╔════════════════════════════════════════╗"
-echo "║   AI NEWS TRADER - SETUP WIZARD        ║"
-echo "╚════════════════════════════════════════╝"
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║   AI NEWS TRADER - COMPLETE SETUP WITH WEB DASHBOARD          ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
 # Check Python version
@@ -19,17 +19,24 @@ source venv/bin/activate
 echo "  Virtual environment created and activated"
 echo ""
 
+# Upgrade pip
+echo "✓ Upgrading pip..."
+pip install --upgrade pip > /dev/null 2>&1
+echo "  pip upgraded"
+echo ""
+
 # Install dependencies
 echo "✓ Installing dependencies..."
-pip install --upgrade pip > /dev/null
-pip install -r requirements.txt > /dev/null
-echo "  Dependencies installed successfully"
+pip install flask flask-cors requests textblob newsapi python-dotenv sqlalchemy > /dev/null 2>&1
+pip install -r requirements.txt > /dev/null 2>&1
+echo "  All dependencies installed successfully"
 echo ""
 
 # Create directories
 echo "✓ Creating project directories..."
 mkdir -p logs
 mkdir -p dashboards
+mkdir -p templates
 mkdir -p data
 echo "  Directories created"
 echo ""
@@ -46,24 +53,40 @@ else
 fi
 
 echo ""
-echo "╔════════════════════════════════════════╗"
-echo "║   SETUP COMPLETE!                      ║"
-echo "╚════════════════════════════════════════╝"
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║   SETUP COMPLETE! 🎉                                          ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Next steps:"
+echo "📋 NEXT STEPS:"
 echo ""
-echo "1. Add your API keys to .env:"
+echo "1️⃣  Add your API keys to .env file:"
+echo "   nano .env"
+echo ""
+echo "   Required keys from:"
 echo "   - NewsAPI: https://newsapi.org"
 echo "   - Finnhub: https://finnhub.io"
 echo "   - Alpha Vantage: https://www.alphavantage.co"
 echo ""
-echo "2. Run demo mode (RECOMMENDED FIRST):"
+echo "2️⃣  Start the trading bot (Terminal 1):"
+echo "   source venv/bin/activate"
 echo "   python main.py demo"
 echo ""
-echo "3. Review dashboards in dashboards/ folder"
+echo "3️⃣  Start the web dashboard (Terminal 2):"
+echo "   source venv/bin/activate"
+echo "   python web_dashboard.py"
 echo ""
-echo "4. When ready, run live trading:"
+echo "4️⃣  Open your browser:"
+echo "   http://localhost:5000"
+echo ""
+echo "5️⃣  Monitor your trades in real-time! 📊"
+echo ""
+echo "📚 Documentation:"
+echo "   - README.md           - Full documentation"
+echo "   - DASHBOARD_GUIDE.md  - Web dashboard help"
+echo "   - BUILD_SUMMARY.md    - Quick reference"
+echo ""
+echo "🚀 When ready for live trading:"
 echo "   python main.py live"
 echo ""
-echo "For help: Check README.md"
+echo "⚠️  Always test with demo mode first!"
 echo ""
